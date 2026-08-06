@@ -9,6 +9,175 @@
     <link rel="modulepreload" crossorigin href="/logo/milai-frame/assets/vendor.6ae0475c.js">
     <link rel="stylesheet" href="/logo/milai-frame/assets/index.cfa8e624.css">
   </head>
+  <!-- 立体阴影功能补丁 -->
+<script>
+(function() {
+    console.log('🌓 milai边框 - 阴影补丁已加载');
+    
+    let attempts = 0;
+    const maxAttempts = 30;
+    
+    const initShadow = setInterval(() => {
+        attempts++;
+        const app = document.getElementById('app');
+        
+        if (app && app.children.length > 0) {
+            clearInterval(initShadow);
+            // 延迟一点等待Vue渲染完成
+            setTimeout(() => {
+                injectShadowUI();
+                patchCanvas();
+            }, 1000);
+        } else if (attempts >= maxAttempts) {
+            clearInterval(initShadow);
+            console.warn('⚠️ 页面加载超时，阴影功能可能无法启用');
+        }
+    }, 500);
+    
+    function injectShadowUI() {
+        if (document.getElementById('shadowToggle')) return;
+        
+        // 查找合适的位置插入阴影控制
+        const insertTarget = document.querySelector('.main-layout__container') || 
+                           document.querySelector('[class*="container"]') ||
+                           document.querySelector('#app > div') ||
+                           document.body;
+        
+        const shadowHTML = `
+            <div class="shadow-controls" style="
+                margin: 15px 20px;
+                padding: 15px 20px;
+                border-top: 2px solid #f0f0f0;
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                flex-wrap: wrap;
+                background: #fafafa;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            ">
+                <label style="display:flex;align-items:center;gap:8px;font-size:14px;color:#333;">
+                    <span>🌓 阴影强度</span>
+                    <input type="range" id="shadowBlur" min="0" max="50" value="20" style="
+                        width:140px;
+                        height:4px;
+                        -webkit-appearance:none;
+                        appearance:none;
+                        background:#d9d9d9;
+                        border-radius:2px;
+                        outline:none;
+                    ">
+                    <span id="shadowValue" style="min-width:35px;font-weight:600;color:#1890ff;">20px</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:14px;color:#333;cursor:pointer;">
+                    <input type="checkbox" id="shadowToggle" checked style="
+                        width:18px;
+                        height:18px;
+                        cursor:pointer;
+                        accent-color:#1890ff;
+                    ">
+                    启用立体阴影
+                </label>
+                <span class="shadow-tip">阴影将自动应用到导出图片</span>
+            </div>
+        `;
+        
+        // 尝试在边框控制附近插入
+        const borderControl = document.querySelector('[class*="border"]') || 
+                            document.querySelector('[class*="frame"]') ||
+                            document.querySelector('[class*="control"]');
+        
+        if (borderControl) {
+            borderControl.insertAdjacentHTML('afterend', shadowHTML);
+        } else {
+            insertTarget.insertAdjacentHTML('beforeend', shadowHTML);
+        }
+        
+        // 绑定事件
+        document.getElementById('shadowBlur').addEventListener('input', function() {
+            document.getElementById('shadowValue').textContent = this.value + 'px';
+        });
+        
+        console.log('✅ 阴影UI已注入到 milai-frame');
+    }
+    
+    function patchCanvas() {
+        const observer = new MutationObserver(() => {
+            document.querySelectorAll('canvas').forEach(canvas => {
+                if (!canvas._shadowPatched) {
+                    canvas._shadowPatched = true;
+                    overrideCanvas(canvas);
+                }
+            });
+        });
+        
+        observer.observe(document.body, { childList: true, subtree: true });
+        
+        // 处理已存在的Canvas
+        document.querySelectorAll('canvas').forEach(canvas => {
+            if (!canvas._shadowPatched) {
+                canvas._shadowPatched = true;
+                overrideCanvas(canvas);
+            }
+        });
+        
+        console.log('✅ Canvas补丁已应用到 milai-frame');
+    }
+    
+    function overrideCanvas(canvas) {
+        const originalToDataURL = canvas.toDataURL.bind(canvas);
+        
+        canvas.toDataURL = function(type, quality) {
+            const shadowBlur = parseInt(document.getElementById('shadowBlur')?.value || 20);
+            const shadowEnabled = document.getElementById('shadowToggle')?.checked !== false;
+            
+            if (!shadowEnabled || shadowBlur === 0) {
+                return originalToDataURL(type, quality);
+            }
+            
+            try {
+                const tempCanvas = document.createElement('canvas');
+                const ctx = tempCanvas.getContext('2d');
+                
+                const shadowOffset = Math.max(shadowBlur * 0.6, 10);
+                const padding = shadowBlur + shadowOffset;
+                
+                tempCanvas.width = this.width + padding;
+                tempCanvas.height = this.height + padding;
+                
+                // 白色背景
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                
+                // 绘制阴影
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+                ctx.shadowBlur = shadowBlur;
+                ctx.shadowOffsetX = shadowOffset * 0.6;
+                ctx.shadowOffsetY = shadowOffset * 0.6;
+                
+                const x = padding / 2 - shadowOffset * 0.2;
+                const y = padding / 2 - shadowOffset * 0.2;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(x, y, this.width, this.height);
+                
+                // 重置阴影
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+                
+                // 绘制原图
+                ctx.drawImage(this, x, y);
+                
+                return tempCanvas.toDataURL(type, quality);
+            } catch (e) {
+                console.warn('阴影处理失败，使用原图', e);
+                return originalToDataURL(type, quality);
+            }
+        };
+    }
+})();
+</script>
   <body>
     <div id="app"></div>
     
