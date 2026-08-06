@@ -6,116 +6,146 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>milai边框</title>
     
-    <!-- 原有的 CSS 资源 -->
     <link rel="stylesheet" href="/logo/milai-frame/assets/index.cfa8e624.css">
     
-    <!-- ===== 新增：立体阴影边框样式 ===== -->
+    <!-- ===== 立体阴影样式 ===== -->
     <style>
-        /* 立体阴影边框效果 - 应用于图片容器 */
-        .milai-frame-shadow {
-            position: relative;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 1;
+        /* 对 canvas 的父容器应用阴影 */
+        .shadow-3d-active .image-render {
+            position: relative !important;
+            z-index: 1 !important;
         }
         
-        /* 激活状态 - 多层级阴影营造立体感 */
-        .milai-frame-shadow.active {
-            box-shadow: 
-                0 0 0 3px rgba(255, 255, 255, 0.9),      /* 内层亮边 */
-                0 0 0 8px rgba(0, 0, 0, 0.10),           /* 中层柔和过渡 */
-                0 0 0 12px rgba(0, 0, 0, 0.06),          /* 外层扩散 */
-                0 8px 32px rgba(0, 0, 0, 0.35),          /* 主阴影 - 右下方向 */
-                0 4px 16px rgba(0, 0, 0, 0.20);          /* 辅助阴影 - 底部加重 */
-            
-            /* 轻微的 3D 透视，增强立体感 */
-            transform: perspective(800px) rotateX(0.8deg) rotateY(0.5deg);
+        /* 主要阴影效果 - 应用到包含 canvas 的容器 */
+        .shadow-3d-active .image-render canvas,
+        .shadow-3d-active .image-render .canvas-wrapper {
+            filter: drop-shadow(0 8px 30px rgba(0, 0, 0, 0.35))
+                    drop-shadow(0 4px 16px rgba(0, 0, 0, 0.20))
+                    drop-shadow(0 0 0 3px rgba(255, 255, 255, 0.85));
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
-        /* 立体边框的装饰性内发光 */
-        .milai-frame-shadow.active::before {
-            content: '';
-            position: absolute;
-            top: -6px;
-            left: -6px;
-            right: -6px;
-            bottom: -6px;
-            border: 2px solid rgba(255, 255, 255, 0.25);
-            border-radius: inherit;
-            pointer-events: none;
-            z-index: -1;
-            opacity: 0;
-            transition: opacity 0.4s ease;
+        /* 悬停增强效果 */
+        .shadow-3d-active .image-render canvas:hover,
+        .shadow-3d-active .image-render .canvas-wrapper:hover {
+            filter: drop-shadow(0 12px 40px rgba(0, 0, 0, 0.40))
+                    drop-shadow(0 6px 20px rgba(0, 0, 0, 0.25))
+                    drop-shadow(0 0 0 3px rgba(255, 255, 255, 0.95));
+            transform: scale(1.005);
         }
         
-        .milai-frame-shadow.active::before {
-            opacity: 1;
+        /* 对 .image-render 容器本身也加一点效果 */
+        .shadow-3d-active .image-render {
+            filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.05));
         }
         
-        /* 鼠标悬停时增强立体感 - 互动反馈 */
-        .milai-frame-shadow.active:hover {
-            box-shadow: 
-                0 0 0 3px rgba(255, 255, 255, 0.95),
-                0 0 0 10px rgba(0, 0, 0, 0.08),
-                0 0 0 16px rgba(0, 0, 0, 0.04),
-                0 12px 48px rgba(0, 0, 0, 0.40),
-                0 6px 24px rgba(0, 0, 0, 0.25);
-            transform: perspective(800px) rotateX(1.2deg) rotateY(0.8deg) scale(1.005);
-        }
-        
-        /* 控制按钮样式 - 简洁现代 */
-        .shadow-toggle-btn {
-            position: fixed;
-            bottom: 28px;
-            right: 28px;
-            z-index: 9999;
-            background: rgba(30, 30, 30, 0.85);
+        /* 立体阴影开关 - 集成到底部 */
+        .shadow-control-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            margin-left: 12px;
+            border-radius: 16px;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            background: rgba(255, 255, 255, 0.6);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
-            color: #fff;
-            padding: 10px 18px;
-            border-radius: 20px;
+            cursor: pointer;
             font-size: 13px;
+            color: #555;
+            transition: all 0.25s ease;
+            user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+        }
+        
+        .shadow-control-btn:hover {
+            background: rgba(255, 255, 255, 0.85);
+            border-color: rgba(0, 0, 0, 0.15);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+        
+        .shadow-control-btn.active {
+            background: rgba(74, 222, 128, 0.20);
+            border-color: rgba(74, 222, 128, 0.40);
+            color: #16a34a;
+        }
+        
+        .shadow-control-btn .indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ccc;
+            transition: all 0.3s ease;
+        }
+        
+        .shadow-control-btn.active .indicator {
+            background: #4ade80;
+            box-shadow: 0 0 12px rgba(74, 222, 128, 0.40);
+        }
+        
+        /* 备选悬浮按钮（如果无法集成到面板） */
+        .shadow-float-btn {
+            position: fixed;
+            bottom: 28px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            background: rgba(20, 20, 20, 0.80);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            color: #fff;
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-size: 14px;
             cursor: pointer;
             user-select: none;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.30);
             border: 1px solid rgba(255, 255, 255, 0.10);
-            transition: all 0.25s ease;
-            letter-spacing: 0.3px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
-        .shadow-toggle-btn:hover {
-            transform: scale(1.06);
-            background: rgba(40, 40, 40, 0.90);
-            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+        .shadow-float-btn:hover {
+            transform: translateX(-50%) scale(1.04);
+            background: rgba(30, 30, 30, 0.85);
         }
         
-        .shadow-toggle-btn.active {
-            background: rgba(0, 180, 80, 0.85);
-            border-color: rgba(0, 255, 120, 0.30);
+        .shadow-float-btn.active {
+            background: rgba(0, 180, 80, 0.75);
+            border-color: rgba(0, 255, 120, 0.20);
         }
         
-        .shadow-toggle-btn.active:hover {
-            background: rgba(0, 200, 90, 0.90);
+        .shadow-float-btn .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.25);
+            transition: all 0.3s ease;
         }
         
-        /* 响应式调整 */
+        .shadow-float-btn.active .dot {
+            background: #4ade80;
+            box-shadow: 0 0 16px rgba(74, 222, 128, 0.50);
+        }
+        
         @media (max-width: 640px) {
-            .shadow-toggle-btn {
+            .shadow-float-btn {
                 bottom: 16px;
-                right: 16px;
-                padding: 8px 14px;
+                padding: 8px 18px;
                 font-size: 12px;
-                border-radius: 16px;
+                border-radius: 24px;
             }
         }
     </style>
-    <!-- ===== 新增样式结束 ===== -->
+    <!-- ===== 样式结束 ===== -->
     
-    <!-- 预加载 JS 模块（原有） -->
     <link rel="modulepreload" crossorigin href="/logo/milai-frame/assets/vendor.6ae0475c.js">
-    
-    <!-- 原有的 JS 主模块 -->
     <script type="module" crossorigin src="/logo/milai-frame/assets/index.796dc854.js"></script>
     
   </head>
@@ -123,228 +153,309 @@
   <body>
     <div id="app"></div>
     
-    <!-- ===== 新增：立体阴影边框控制逻辑 ===== -->
+    <!-- ===== 立体阴影控制逻辑 ===== -->
     <script>
         (function() {
             'use strict';
             
-            // 等待 Vue 应用挂载完成
-            let targetElement = null;
+            // --- 配置 ---
+            const CONFIG = {
+                retryInterval: 400,
+                maxRetries: 25,
+                debug: true
+            };
+            
+            let isActive = false;
             let isInitialized = false;
             let controlBtn = null;
+            let floatBtn = null;
+            let retryCount = 0;
+            let imageRenderEl = null;
+            let canvasEl = null;
             
-            // 查找目标元素的函数
-            function findTargetElement() {
-                const app = document.querySelector('#app');
-                if (!app) return null;
-                
-                // 策略1: 查找包含图片的主要容器
-                const img = app.querySelector('img');
-                if (img) {
-                    // 如果 img 有父容器且尺寸较大，使用父容器
-                    const parent = img.parentElement;
-                    if (parent && parent !== app) {
-                        const rect = parent.getBoundingClientRect();
-                        if (rect.width > 50 && rect.height > 50) {
-                            return parent;
-                        }
-                    }
-                    // 否则直接使用 img 本身
-                    return img;
-                }
-                
-                // 策略2: 查找带有图片背景或尺寸较大的 div
-                const divs = app.querySelectorAll('div');
-                for (let div of divs) {
-                    const style = window.getComputedStyle(div);
-                    const bgImage = style.backgroundImage;
-                    if (bgImage && bgImage !== 'none' && bgImage.includes('url')) {
-                        const rect = div.getBoundingClientRect();
-                        if (rect.width > 100 && rect.height > 100) {
-                            return div;
-                        }
-                    }
-                }
-                
-                // 策略3: 查找最大的可见元素（作为备选）
-                let largest = null;
-                let maxArea = 0;
-                for (let div of divs) {
-                    const rect = div.getBoundingClientRect();
-                    const area = rect.width * rect.height;
-                    if (area > maxArea && rect.width > 100 && rect.height > 100) {
-                        maxArea = area;
-                        largest = div;
-                    }
-                }
-                
-                return largest || app;
+            function log(...args) {
+                if (CONFIG.debug) console.log('[立体阴影]', ...args);
             }
             
-            // 初始化阴影功能
-            function initShadowFeature() {
-                if (isInitialized) return;
-                
-                targetElement = findTargetElement();
-                if (!targetElement) {
-                    console.warn('[立体阴影] 未找到目标元素，稍后重试...');
-                    setTimeout(initShadowFeature, 500);
-                    return;
+            // --- 查找 Canvas 和其父容器 ---
+            function findCanvasElements() {
+                const app = document.querySelector('#app');
+                if (!app) {
+                    log('未找到 #app');
+                    return null;
                 }
                 
-                // 添加阴影类
-                targetElement.classList.add('milai-frame-shadow');
-                console.log('[立体阴影] 已绑定到元素:', targetElement.tagName, targetElement.className);
+                // 查找 canvas 元素
+                const canvas = app.querySelector('canvas.canvas');
+                if (!canvas) {
+                    log('未找到 canvas.canvas 元素');
+                    return null;
+                }
+                
+                log('找到 canvas:', canvas);
+                
+                // 查找 .image-render 容器
+                let imageRender = canvas.closest('.image-render');
+                if (!imageRender) {
+                    // 尝试其他方式查找
+                    imageRender = app.querySelector('.image-render');
+                }
+                
+                if (!imageRender) {
+                    log('未找到 .image-render 容器');
+                    // 如果找不到，使用 canvas 的父级
+                    imageRender = canvas.parentElement;
+                }
+                
+                log('找到 .image-render:', imageRender);
+                
+                return {
+                    canvas: canvas,
+                    imageRender: imageRender || canvas.parentElement
+                };
+            }
+            
+            // --- 应用阴影 ---
+            function applyShadowToCanvas(elements) {
+                if (!elements) return false;
+                
+                // 清除之前的标记
+                document.querySelectorAll('.shadow-3d-active').forEach(el => {
+                    el.classList.remove('shadow-3d-active');
+                });
+                
+                // 对 .image-render 容器添加标记
+                elements.imageRender.classList.add('shadow-3d-active');
+                
+                // 如果之前是激活状态，恢复
+                if (isActive) {
+                    elements.imageRender.classList.add('shadow-3d-active');
+                    // 触发重绘以确保阴影生效
+                    elements.imageRender.style.transform = 'translateZ(0)';
+                    requestAnimationFrame(() => {
+                        elements.imageRender.style.transform = '';
+                    });
+                }
+                
+                imageRenderEl = elements.imageRender;
+                canvasEl = elements.canvas;
+                
+                log('阴影已应用到 .image-render');
+                return true;
+            }
+            
+            // --- 切换阴影 ---
+            function toggleShadow() {
+                if (!imageRenderEl) {
+                    log('目标不存在，重新查找...');
+                    const elements = findCanvasElements();
+                    if (!elements) {
+                        log('无法找到目标元素');
+                        return;
+                    }
+                    applyShadowToCanvas(elements);
+                }
+                
+                isActive = !isActive;
+                
+                if (isActive) {
+                    imageRenderEl.classList.add('shadow-3d-active');
+                } else {
+                    imageRenderEl.classList.remove('shadow-3d-active');
+                }
+                
+                // 更新按钮状态
+                if (controlBtn) {
+                    controlBtn.classList.toggle('active', isActive);
+                }
+                if (floatBtn) {
+                    floatBtn.classList.toggle('active', isActive);
+                }
+                
+                log('阴影状态:', isActive ? '开启 ✅' : '关闭 ❌');
+            }
+            
+            // --- 尝试集成到功能面板 ---
+            function tryIntegrateToPanel() {
+                // 查找控制区域
+                const controlArea = document.querySelector('.control-area');
+                if (!controlArea) {
+                    log('未找到 .control-area');
+                    return false;
+                }
+                
+                // 检查是否已有我们的按钮
+                if (controlArea.querySelector('.shadow-control-btn')) {
+                    return true;
+                }
+                
+                // 查找 "边框" 相关元素，在其后面添加
+                const borderElements = controlArea.querySelectorAll('*');
+                let insertTarget = controlArea;
+                
+                for (let el of borderElements) {
+                    if (el.textContent && el.textContent.includes('边框')) {
+                        insertTarget = el.parentElement || controlArea;
+                        break;
+                    }
+                }
                 
                 // 创建控制按钮
-                controlBtn = document.createElement('div');
-                controlBtn.className = 'shadow-toggle-btn';
-                controlBtn.textContent = '✨ 立体阴影';
-                controlBtn.setAttribute('role', 'button');
-                controlBtn.setAttribute('aria-label', '切换立体阴影边框效果');
+                controlBtn = document.createElement('span');
+                controlBtn.className = 'shadow-control-btn';
+                controlBtn.innerHTML = `
+                    <span class="indicator"></span>
+                    <span>立体阴影</span>
+                `;
                 
                 controlBtn.addEventListener('click', function(e) {
                     e.stopPropagation();
                     toggleShadow();
                 });
                 
-                document.body.appendChild(controlBtn);
-                console.log('[立体阴影] 控制按钮已添加');
+                // 插入到控制区域
+                insertTarget.appendChild(controlBtn);
+                log('已集成到功能面板');
+                return true;
+            }
+            
+            // --- 创建悬浮按钮（备选） ---
+            function createFloatButton() {
+                // 移除旧的
+                const old = document.querySelector('.shadow-float-btn');
+                if (old) old.remove();
                 
-                // 尝试与原边框开关联动
-                setupBorderSwitchListener();
+                floatBtn = document.createElement('div');
+                floatBtn.className = 'shadow-float-btn';
+                floatBtn.innerHTML = `
+                    <span>🔲</span>
+                    <span>立体阴影</span>
+                    <span class="dot"></span>
+                `;
+                
+                floatBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    toggleShadow();
+                });
+                
+                document.body.appendChild(floatBtn);
+                log('已创建悬浮按钮');
+                return floatBtn;
+            }
+            
+            // --- 监听外边框开关 ---
+            function watchOuterBorder() {
+                const app = document.querySelector('#app');
+                if (!app) return;
+                
+                // 监听点击事件
+                document.addEventListener('click', function(e) {
+                    const target = e.target;
+                    if (!target) return;
+                    
+                    // 检查是否点击了"使用外边框"相关元素
+                    const text = target.textContent || '';
+                    if (text.includes('使用外边框') || text.includes('外边框')) {
+                        // 延迟执行，等待状态变化
+                        setTimeout(() => {
+                            // 检查是否有外边框开启的迹象
+                            if (imageRenderEl) {
+                                // 检查 canvas 或其父元素是否有边框相关样式
+                                const hasBorder = 
+                                    canvasEl?.style?.border !== '' ||
+                                    imageRenderEl?.style?.border !== '' ||
+                                    imageRenderEl?.classList?.contains('border') ||
+                                    imageRenderEl?.classList?.contains('has-border');
+                                
+                                if (hasBorder && !isActive) {
+                                    log('检测到外边框开启，自动激活立体阴影');
+                                    toggleShadow();
+                                }
+                            }
+                        }, 500);
+                    }
+                });
+            }
+            
+            // --- 初始化 ---
+            function init() {
+                if (isInitialized) {
+                    log('已初始化');
+                    return;
+                }
+                
+                retryCount++;
+                log(`尝试 ${retryCount}/${CONFIG.maxRetries}`);
+                
+                const elements = findCanvasElements();
+                if (!elements) {
+                    if (retryCount < CONFIG.maxRetries) {
+                        setTimeout(init, CONFIG.retryInterval);
+                    } else {
+                        log('初始化失败：超时');
+                    }
+                    return;
+                }
+                
+                // 应用阴影
+                applyShadowToCanvas(elements);
+                
+                // 尝试集成到面板
+                const integrated = tryIntegrateToPanel();
+                if (!integrated) {
+                    // 如果无法集成，使用悬浮按钮
+                    createFloatButton();
+                }
+                
+                // 监听外边框
+                watchOuterBorder();
+                
+                // 暴露调试接口
+                window.__shadow3d = {
+                    toggle: toggleShadow,
+                    enable: () => { if (!isActive) toggleShadow(); },
+                    disable: () => { if (isActive) toggleShadow(); },
+                    status: () => isActive,
+                    find: findCanvasElements,
+                    apply: applyShadowToCanvas,
+                    _elements: { imageRender: imageRenderEl, canvas: canvasEl }
+                };
                 
                 isInitialized = true;
+                log('初始化完成！使用 window.__shadow3d 控制');
+                log('提示：如果看不到效果，在控制台执行 window.__shadow3d.toggle()');
             }
             
-            // 切换阴影状态
-            function toggleShadow() {
-                if (!targetElement) return;
-                targetElement.classList.toggle('active');
-                const isActive = targetElement.classList.contains('active');
-                controlBtn.classList.toggle('active', isActive);
-                controlBtn.textContent = isActive ? '✨ 立体阴影 ✦' : '✨ 立体阴影';
-                console.log('[立体阴影] 状态:', isActive ? '开启' : '关闭');
-            }
-            
-            // 监听原边框开关
-            function setupBorderSwitchListener() {
-                // 使用 MutationObserver 检测元素变化
-                const observer = new MutationObserver(function(mutations) {
-                    // 检查目标元素的样式变化
-                    const hasBorderStyle = 
-                        targetElement.style.border !== '' && targetElement.style.border !== 'none' ||
-                        targetElement.style.outline !== '' && targetElement.style.outline !== 'none' ||
-                        targetElement.style.boxShadow !== '' && targetElement.style.boxShadow !== 'none';
-                    
-                    // 检查是否包含边框相关的类
-                    const hasBorderClass = 
-                        targetElement.classList.contains('border') ||
-                        targetElement.classList.contains('has-border') ||
-                        targetElement.classList.contains('frame') ||
-                        targetElement.classList.contains('bordered');
-                    
-                    // 如果检测到边框开启，自动激活阴影
-                    if (hasBorderStyle || hasBorderClass) {
-                        if (!targetElement.classList.contains('active')) {
-                            targetElement.classList.add('active');
-                            controlBtn.classList.add('active');
-                            controlBtn.textContent = '✨ 立体阴影 ✦';
-                            console.log('[立体阴影] 检测到外边框开启，自动激活立体阴影');
-                        }
-                    }
-                });
-                
-                // 观察目标元素和 #app
-                observer.observe(targetElement, {
-                    attributes: true,
-                    attributeFilter: ['class', 'style'],
-                    childList: false,
-                    subtree: false
-                });
-                
-                // 也观察 #app 的变化（Vue 可能会重建 DOM）
-                const app = document.querySelector('#app');
-                if (app && app !== targetElement) {
-                    const appObserver = new MutationObserver(function() {
-                        // 如果目标元素被替换，重新查找
-                        const newTarget = findTargetElement();
-                        if (newTarget && newTarget !== targetElement) {
-                            // 转移状态到新元素
-                            const wasActive = targetElement.classList.contains('active');
-                            targetElement.classList.remove('milai-frame-shadow', 'active');
-                            targetElement = newTarget;
-                            targetElement.classList.add('milai-frame-shadow');
-                            if (wasActive) {
-                                targetElement.classList.add('active');
-                            }
-                            console.log('[立体阴影] 重新绑定到新元素');
-                        }
-                    });
-                    appObserver.observe(app, {
-                        childList: true,
-                        subtree: true
-                    });
-                }
-            }
-            
-            // 当 DOM 加载完成后初始化
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', function() {
-                    // 延迟执行，等待 Vue 渲染
-                    setTimeout(initShadowFeature, 800);
-                });
+            // --- 启动 ---
+            if (document.readyState === 'complete') {
+                setTimeout(init, 600);
             } else {
-                // DOM 已加载
-                setTimeout(initShadowFeature, 800);
+                document.addEventListener('readystatechange', function() {
+                    if (document.readyState === 'complete') {
+                        setTimeout(init, 600);
+                    }
+                });
             }
             
-            // 额外的安全措施：如果 Vue 加载慢，多次重试
-            let retryCount = 0;
-            const maxRetries = 10;
-            const retryInterval = setInterval(function() {
-                if (isInitialized) {
-                    clearInterval(retryInterval);
-                    return;
-                }
-                retryCount++;
-                if (retryCount > maxRetries) {
-                    clearInterval(retryInterval);
-                    console.warn('[立体阴影] 初始化超时，请手动点击按钮尝试');
-                    return;
-                }
-                const el = findTargetElement();
-                if (el && el.querySelector('img') !== null) {
-                    initShadowFeature();
-                }
-            }, 600);
-            
-            // 暴露控制接口到全局，方便调试
-            window.__milaiShadow = {
-                toggle: toggleShadow,
-                enable: function() {
-                    if (targetElement) {
-                        targetElement.classList.add('active');
-                        controlBtn.classList.add('active');
-                        controlBtn.textContent = '✨ 立体阴影 ✦';
+            // 路由变化重新绑定
+            window.addEventListener('popstate', function() {
+                setTimeout(() => {
+                    if (isInitialized) {
+                        const elements = findCanvasElements();
+                        if (elements) {
+                            applyShadowToCanvas(elements);
+                            if (isActive) {
+                                imageRenderEl.classList.add('shadow-3d-active');
+                            }
+                            log('路由变化，重新绑定');
+                        }
                     }
-                },
-                disable: function() {
-                    if (targetElement) {
-                        targetElement.classList.remove('active');
-                        controlBtn.classList.remove('active');
-                        controlBtn.textContent = '✨ 立体阴影';
-                    }
-                },
-                status: function() {
-                    return targetElement ? targetElement.classList.contains('active') : false;
-                }
-            };
+                }, 400);
+            });
             
-            console.log('[立体阴影] 已加载，可通过 window.__milaiShadow 控制');
         })();
     </script>
-    <!-- ===== 新增控制逻辑结束 ===== -->
+    <!-- ===== 控制逻辑结束 ===== -->
     
   </body>
 </html>
