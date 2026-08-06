@@ -8,32 +8,55 @@
     
     <link rel="stylesheet" href="/logo/milai-frame/assets/index.cfa8e624.css">
     
-    <!-- ===== 立体阴影样式（增强版） ===== -->
+    <!-- ===== 立体阴影样式 ===== -->
     <style>
-        /* 核心：对 Canvas 应用阴影 */
-        .shadow-3d-active canvas.canvas {
-            filter: drop-shadow(0 8px 30px rgba(0, 0, 0, 0.40))
-                    drop-shadow(0 4px 16px rgba(0, 0, 0, 0.25))
-                    drop-shadow(0 0 0 4px rgba(255, 255, 255, 0.90)) !important;
+        /* 阴影容器 - 包裹 canvas 的父容器 */
+        .shadow-wrapper-3d {
+            position: relative !important;
+            z-index: 1 !important;
+            display: inline-block !important;
+        }
+        
+        /* 阴影叠加层 - 通过伪元素实现立体阴影 */
+        .shadow-wrapper-3d::after {
+            content: '' !important;
+            position: absolute !important;
+            top: 6px !important;
+            left: 6px !important;
+            right: -6px !important;
+            bottom: -6px !important;
+            border-radius: 4px !important;
+            background: transparent !important;
+            box-shadow: 
+                0 8px 40px rgba(0, 0, 0, 0.35),
+                0 4px 20px rgba(0, 0, 0, 0.20),
+                0 0 0 4px rgba(255, 255, 255, 0.85) !important;
+            pointer-events: none !important;
+            z-index: -1 !important;
             transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            opacity: 0 !important;
+        }
+        
+        /* 激活时显示阴影 */
+        .shadow-wrapper-3d.active::after {
+            opacity: 1 !important;
         }
         
         /* 悬停增强 */
-        .shadow-3d-active canvas.canvas:hover {
-            filter: drop-shadow(0 12px 44px rgba(0, 0, 0, 0.45))
-                    drop-shadow(0 6px 24px rgba(0, 0, 0, 0.30))
-                    drop-shadow(0 0 0 4px rgba(255, 255, 255, 0.95)) !important;
-            transform: scale(1.008) !important;
+        .shadow-wrapper-3d.active:hover::after {
+            box-shadow: 
+                0 12px 50px rgba(0, 0, 0, 0.40),
+                0 6px 28px rgba(0, 0, 0, 0.25),
+                0 0 0 4px rgba(255, 255, 255, 0.95) !important;
         }
         
-        /* 确保 Canvas 保持原有样式 */
-        .shadow-3d-active .image-render {
+        /* 确保 canvas 不受影响 */
+        .shadow-wrapper-3d canvas {
             position: relative !important;
             z-index: 1 !important;
-            padding: 4px !important;
         }
         
-        /* 立体阴影开关样式 */
+        /* 控制开关样式 */
         .shadow-control-btn {
             display: inline-flex;
             align-items: center;
@@ -72,6 +95,7 @@
             border-radius: 50%;
             background: #ccc;
             transition: all 0.3s ease;
+            display: inline-block;
         }
         
         .shadow-control-btn.active .indicator {
@@ -120,6 +144,7 @@
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.25);
             transition: all 0.3s ease;
+            display: inline-block;
         }
         
         .shadow-float-btn.active .dot {
@@ -153,7 +178,7 @@
             
             const CONFIG = {
                 retryInterval: 400,
-                maxRetries: 25,
+                maxRetries: 30,
                 debug: true
             };
             
@@ -162,84 +187,89 @@
             let controlBtn = null;
             let floatBtn = null;
             let retryCount = 0;
-            let imageRenderEl = null;
+            let wrapperEl = null;      // 我们创建的包裹容器
             let canvasEl = null;
+            let imageRenderEl = null;
             
             function log(...args) {
                 if (CONFIG.debug) console.log('[立体阴影]', ...args);
             }
             
-            function findCanvasElements() {
+            // --- 查找 Canvas ---
+            function findCanvas() {
                 const app = document.querySelector('#app');
-                if (!app) {
-                    log('未找到 #app');
-                    return null;
-                }
-                
-                const canvas = app.querySelector('canvas.canvas');
-                if (!canvas) {
-                    log('未找到 canvas.canvas');
-                    return null;
-                }
-                
-                let imageRender = canvas.closest('.image-render');
-                if (!imageRender) {
-                    imageRender = app.querySelector('.image-render');
-                }
-                if (!imageRender) {
-                    imageRender = canvas.parentElement;
-                }
-                
-                return { canvas, imageRender };
+                if (!app) return null;
+                return app.querySelector('canvas.canvas');
             }
             
-            function applyShadowToCanvas(elements) {
-                if (!elements) return false;
+            // --- 创建包裹容器 ---
+            function createWrapper(canvas) {
+                if (!canvas) return null;
                 
-                // 先清除所有标记
-                document.querySelectorAll('.shadow-3d-active').forEach(el => {
-                    el.classList.remove('shadow-3d-active');
-                });
-                
-                // 对 .image-render 添加标记
-                elements.imageRender.classList.add('shadow-3d-active');
-                
-                // 如果激活状态，重新应用
-                if (isActive) {
-                    elements.imageRender.classList.add('shadow-3d-active');
+                // 如果已经有包裹容器了，直接返回
+                let parent = canvas.parentElement;
+                if (parent && parent.classList.contains('shadow-wrapper-3d')) {
+                    return parent;
                 }
                 
-                imageRenderEl = elements.imageRender;
-                canvasEl = elements.canvas;
+                // 获取 canvas 的父容器 .image-render
+                imageRenderEl = canvas.closest('.image-render') || canvas.parentElement;
                 
-                log('阴影已应用到 canvas');
+                // 在 .image-render 中创建一个包裹层
+                const wrapper = document.createElement('div');
+                wrapper.className = 'shadow-wrapper-3d';
+                wrapper.style.cssText = `
+                    position: relative !important;
+                    display: inline-block !important;
+                    z-index: 1 !important;
+                    width: 100% !important;
+                    height: 100% !important;
+                `;
+                
+                // 将 canvas 移动到 wrapper 中
+                canvas.parentElement.insertBefore(wrapper, canvas);
+                wrapper.appendChild(canvas);
+                
+                log('已创建包裹容器');
+                return wrapper;
+            }
+            
+            // --- 应用阴影 ---
+            function applyShadow() {
+                if (!wrapperEl) {
+                    const canvas = findCanvas();
+                    if (!canvas) return false;
+                    wrapperEl = createWrapper(canvas);
+                    canvasEl = canvas;
+                    if (!wrapperEl) return false;
+                }
+                
+                // 直接通过类控制
+                if (isActive) {
+                    wrapperEl.classList.add('active');
+                } else {
+                    wrapperEl.classList.remove('active');
+                }
+                
+                log('阴影状态:', isActive ? '开启 ✅' : '关闭 ❌');
                 return true;
             }
             
+            // --- 切换阴影 ---
             function toggleShadow() {
-                if (!imageRenderEl || !canvasEl) {
-                    log('重新查找元素...');
-                    const elements = findCanvasElements();
-                    if (!elements) {
-                        log('找不到目标元素');
+                if (!wrapperEl || !canvasEl) {
+                    const canvas = findCanvas();
+                    if (!canvas) {
+                        log('找不到 Canvas');
                         return;
                     }
-                    applyShadowToCanvas(elements);
+                    wrapperEl = createWrapper(canvas);
+                    canvasEl = canvas;
+                    if (!wrapperEl) return;
                 }
                 
                 isActive = !isActive;
-                
-                // 关键：直接对 Canvas 添加/移除类
-                if (isActive) {
-                    imageRenderEl.classList.add('shadow-3d-active');
-                    // 强制重绘
-                    canvasEl.style.transform = 'translateZ(0)';
-                    requestAnimationFrame(() => {
-                        canvasEl.style.transform = '';
-                    });
-                } else {
-                    imageRenderEl.classList.remove('shadow-3d-active');
-                }
+                applyShadow();
                 
                 // 更新按钮
                 if (controlBtn) {
@@ -248,10 +278,9 @@
                 if (floatBtn) {
                     floatBtn.classList.toggle('active', isActive);
                 }
-                
-                log('阴影状态:', isActive ? '开启 ✅' : '关闭 ❌');
             }
             
+            // --- 集成到功能面板 ---
             function tryIntegrateToPanel() {
                 const controlArea = document.querySelector('.control-area');
                 if (!controlArea) {
@@ -263,7 +292,6 @@
                     return true;
                 }
                 
-                // 查找插入位置
                 let insertTarget = controlArea;
                 const items = controlArea.querySelectorAll('*');
                 for (let el of items) {
@@ -289,6 +317,7 @@
                 return true;
             }
             
+            // --- 创建悬浮按钮 ---
             function createFloatButton() {
                 const old = document.querySelector('.shadow-float-btn');
                 if (old) old.remove();
@@ -310,6 +339,7 @@
                 return floatBtn;
             }
             
+            // --- 监听外边框 ---
             function watchOuterBorder() {
                 document.addEventListener('click', function(e) {
                     const target = e.target;
@@ -318,14 +348,13 @@
                     const text = target.textContent || '';
                     if (text.includes('使用外边框') || text.includes('外边框')) {
                         setTimeout(() => {
-                            // 检测是否有外边框样式
+                            // 检查 canvas 是否有边框
                             if (canvasEl) {
                                 const style = window.getComputedStyle(canvasEl);
                                 const hasBorder = 
                                     style.borderWidth !== '0px' ||
                                     style.border !== 'none' ||
-                                    style.outline !== 'none' ||
-                                    imageRenderEl?.classList?.contains('border');
+                                    style.outline !== 'none';
                                 
                                 if (hasBorder && !isActive) {
                                     log('检测到外边框开启，自动激活立体阴影');
@@ -337,14 +366,15 @@
                 });
             }
             
+            // --- 初始化 ---
             function init() {
                 if (isInitialized) return;
                 
                 retryCount++;
                 log(`尝试 ${retryCount}/${CONFIG.maxRetries}`);
                 
-                const elements = findCanvasElements();
-                if (!elements) {
+                const canvas = findCanvas();
+                if (!canvas) {
                     if (retryCount < CONFIG.maxRetries) {
                         setTimeout(init, CONFIG.retryInterval);
                     } else {
@@ -353,8 +383,16 @@
                     return;
                 }
                 
-                // 先应用一次（默认关闭）
-                applyShadowToCanvas(elements);
+                canvasEl = canvas;
+                wrapperEl = createWrapper(canvas);
+                
+                if (!wrapperEl) {
+                    log('创建包裹容器失败');
+                    return;
+                }
+                
+                // 默认关闭状态
+                wrapperEl.classList.remove('active');
                 
                 // 集成到面板
                 const integrated = tryIntegrateToPanel();
@@ -370,35 +408,37 @@
                     enable: () => { if (!isActive) toggleShadow(); },
                     disable: () => { if (isActive) toggleShadow(); },
                     status: () => isActive,
-                    find: findCanvasElements,
-                    _elements: { imageRender: imageRenderEl, canvas: canvasEl }
+                    _elements: { wrapper: wrapperEl, canvas: canvasEl }
                 };
                 
                 isInitialized = true;
                 log('初始化完成！');
-                log('提示：执行 window.__shadow3d.toggle() 测试');
+                log('点击"立体阴影"开关或执行 window.__shadow3d.toggle()');
             }
             
-            // 启动
+            // --- 启动 ---
             if (document.readyState === 'complete') {
-                setTimeout(init, 500);
+                setTimeout(init, 600);
             } else {
                 document.addEventListener('readystatechange', () => {
                     if (document.readyState === 'complete') {
-                        setTimeout(init, 500);
+                        setTimeout(init, 600);
                     }
                 });
             }
             
+            // 路由变化重新绑定
             window.addEventListener('popstate', () => {
                 setTimeout(() => {
                     if (isInitialized) {
-                        const elements = findCanvasElements();
-                        if (elements) {
-                            applyShadowToCanvas(elements);
+                        const canvas = findCanvas();
+                        if (canvas && canvas !== canvasEl) {
+                            canvasEl = canvas;
+                            wrapperEl = createWrapper(canvas);
                             if (isActive) {
-                                imageRenderEl.classList.add('shadow-3d-active');
+                                wrapperEl?.classList.add('active');
                             }
+                            log('路由变化，重新绑定');
                         }
                     }
                 }, 400);
